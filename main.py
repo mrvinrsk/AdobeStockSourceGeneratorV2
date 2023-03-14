@@ -1,50 +1,43 @@
-import json
+import datetime
 import sys
 
-import requests
-from bs4 import BeautifulSoup
+from scrape_link import adobestock, flaticon, fallback
 
 if __name__ == '__main__':
-
     # if file path is given as cli argument, use it for reading, otherwise use "sources.txt" in current directory
     if len(sys.argv) > 1:
         file_path = sys.argv[1]
     else:
         file_path = "sources.txt"
 
+    now = datetime.datetime.now()
+
+    # format the date and time as a string
+    date_string = now.strftime("%d.%m.%Y %H:%M")
+
+    with open(file_path[:file_path.rfind(".")] + ".html", "a") as output:
+        output.write("<div class='sources' data-last-updated='" + str(date_string) + '\'>\n')
+        output.write("\t<!-- StockSourceGenerator by Marvin Roßkothen -->\n")
+
     # read each line as a source url
     with open(file_path, "r") as f:
         for line in f:
-            url = line.strip()
-            # get the html content of the url
-            html = requests.get(url).text
-            # parse the html content
-            soup = BeautifulSoup(html, "html.parser")
+            url = line.strip().split("?")[0]  # URL without parameters
 
-            # get script element with id "image-detail-json
-            script = soup.find("script", {"id": "image-detail-json"})
-            # get the content of the script element
-            script_content = script.contents[0]
+            if "stock.adobe.com" in url:
+                link = adobestock(url)
+            elif "flaticon.com" in url:
+                link = flaticon(url)
+            else:
+                link = fallback(url)
 
-            # get image id from url (last part of url)
-            image_id = url[url.rfind("/") + 1:]
-
-            # parse the content as json
-            _json = json.loads(script_content)
-
-            title = _json[image_id]["title"]
-            contributor = _json[image_id]["author"]
-
-            # shorten the title to a max. of 50 characters, don't cut words
-            title = title[:50]
-            title = title[:title.rfind(" ")] + "..."
-
-            print("Finished parsing: " + url)
-
-            # create string with format: <a href="url" target="_blank">contributor - title</a>
-            link = '<a href="' + url + '" target="_blank">' + contributor + " - " + title + "</a>"
-
-            # write the link to a file in the same directory as the file being parsed (use absolute path). The created file should be the same name as the file being parsed, but with ".html" as extension
+            # write the link to a file in the same directory as the file being parsed (use absolute path). The
+            # created file should be the same name as the file being parsed, but with ".html" as extension
             with open(file_path[:file_path.rfind(".")] + ".html", "a") as output:
-                output.write(link)
+                output.write("\t" + link)
                 output.write("\n")
+
+            print("Finished parsing & saved href for: " + url)
+
+    with open(file_path[:file_path.rfind(".")] + ".html", "a") as output:
+        output.write("</div>")
