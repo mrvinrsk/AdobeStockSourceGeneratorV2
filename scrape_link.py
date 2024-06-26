@@ -2,6 +2,7 @@ import json
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
+from selenium.common import TimeoutException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as ec
@@ -53,10 +54,13 @@ def flaticon(url):
     wait.until(lambda driver: driver.execute_script('return document.readyState') == 'complete')
 
     # find the consent banner
-    consent_banner = wait.until(ec.visibility_of_element_located((By.XPATH, '//*[@id="onetrust-consent-sdk"]')))
+    try:
+        consent_banner = wait.until(ec.visibility_of_element_located((By.XPATH, '//*[@id="onetrust-consent-sdk"]')))
 
-    # execute JavaScript to remove the banner
-    driver.execute_script("arguments[0].remove()", consent_banner)
+        # execute JavaScript to remove the banner
+        driver.execute_script("arguments[0].remove()", consent_banner)
+    except TimeoutException:
+        pass
 
     # scroll to the button element
     button = wait.until(ec.visibility_of_element_located((By.XPATH, '//*[@id="icon-lincense"]/div/div/div/button')))
